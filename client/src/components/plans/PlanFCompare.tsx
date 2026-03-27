@@ -265,22 +265,50 @@ function DoctorCompareList({ onCompare, selectedIds, onToggle }: DoctorCompareLi
 function DoctorCompareView({ selectedIds }: { selectedIds: string[] }) {
   const selected = hospitals.filter((h) => selectedIds.includes(h.id));
   const h1 = selected[0] ?? hospitals[0];
-  const h2 = selected[1] ?? hospitals[2];
   const [interested, setInterested] = useState(false);
 
-  const rows = [
-    { label: "マッチ度", v1: `${h1.matchScore}%`, v2: `${h2.matchScore}%`, w1: h1.matchScore > h2.matchScore },
-    { label: "年収", v1: h1.salary.replace("年収", ""), v2: h2.salary.replace("年収", ""), w1: true },
-    { label: "病床数", v1: `${h1.beds}床`, v2: `${h2.beds}床`, w1: h1.beds > h2.beds },
-    { label: "勤務地", v1: h1.location, v2: h2.location, w1: false },
-    { label: "診療科", v1: h1.department, v2: h2.department, w1: false },
+  const is3 = selected.length >= 3;
+  const colClass = is3 ? "grid-cols-[70px_1fr_1fr_1fr]" : "grid-cols-[80px_1fr_1fr]";
+
+  const dynamicRows = [
+    {
+      label: "マッチ度",
+      values: selected.map((h) => `${h.matchScore}%`),
+      bestIdx: selected.reduce((maxIdx, h, i, arr) => h.matchScore > arr[maxIdx].matchScore ? i : maxIdx, 0),
+    },
+    {
+      label: "年収",
+      values: selected.map((h) => h.salary.replace("年収", "")),
+      bestIdx: 0,
+    },
+    {
+      label: "病床数",
+      values: selected.map((h) => `${h.beds}床`),
+      bestIdx: selected.reduce((maxIdx, h, i, arr) => h.beds > arr[maxIdx].beds ? i : maxIdx, 0),
+    },
+    {
+      label: "勤務地",
+      values: selected.map((h) => h.location),
+      bestIdx: -1,
+    },
+    {
+      label: "診療科",
+      values: selected.map((h) => h.department),
+      bestIdx: -1,
+    },
   ];
+
+  const winner = selected.reduce((best, h) => h.matchScore > best.matchScore ? h : best, selected[0] ?? hospitals[0]);
+
+  const headerSubtitle = is3
+    ? selected.map((h) => h.name.slice(0, 4) + "…").join(" / ")
+    : `${h1.name.slice(0, 5)}… vs ${(selected[1] ?? hospitals[2]).name.slice(0, 5)}…`;
 
   return (
     <div className="h-full bg-gray-50 overflow-y-auto pb-16">
       <div className="bg-sky-700 px-5 pt-4 pb-4 text-white">
         <h1 className="text-lg font-bold">比較表</h1>
-        <p className="text-xs text-sky-200 mt-0.5">{h1.name.slice(0, 5)}… vs {h2.name.slice(0, 5)}…</p>
+        <p className="text-xs text-sky-200 mt-0.5">{headerSubtitle}</p>
       </div>
 
       {/* Radar Chart */}
@@ -299,53 +327,71 @@ function DoctorCompareView({ selectedIds }: { selectedIds: string[] }) {
             <span className="w-3 h-1 bg-sky-600 rounded-full inline-block" />田中先生
           </span>
           <span className="flex items-center gap-1.5 text-[10px] text-gray-500">
-            <span className="w-3 h-1 bg-amber-400 rounded-full inline-block" />求人要件
+            <span className="w-3 h-1 bg-amber-400 rounded-full inline-block" />
+            {selected.length > 0 ? selected.map((h) => h.name.slice(0, 4)).join("・") + " 求人要件" : "求人要件"}
           </span>
         </div>
       </div>
 
       {/* Comparison Table */}
       <div className="mx-4 mt-3 bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-        <div className="grid grid-cols-[80px_1fr_1fr] bg-gray-50 border-b border-gray-100">
+        {/* Header row */}
+        <div className={`grid ${colClass} bg-gray-50 border-b border-gray-100`}>
           <div className="px-3 py-2.5" />
-          <div className="px-2 py-2.5 text-center text-[10px] font-bold text-sky-700 leading-tight">
-            {h1.name.slice(0, 6)}…
-          </div>
-          <div className="px-2 py-2.5 text-center text-[10px] font-bold text-sky-700 leading-tight">
-            {h2.name.slice(0, 3)}…
-          </div>
+          {selected.map((h) => (
+            <div key={h.id} className="px-2 py-2.5 text-center text-[10px] font-bold text-sky-700 leading-tight">
+              {h.name.slice(0, is3 ? 4 : 6)}…
+            </div>
+          ))}
         </div>
-        {rows.map((row, i) => (
+        {/* Data rows */}
+        {dynamicRows.map((row, i) => (
           <div
             key={i}
-            className={`grid grid-cols-[80px_1fr_1fr] border-b border-gray-50 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/40"}`}
+            className={`grid ${colClass} border-b border-gray-50 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/40"}`}
           >
             <div className="px-3 py-2.5 text-[10px] text-gray-400 font-medium self-center">{row.label}</div>
-            <div className="px-2 py-2.5 text-center">
-              <span className={`text-[11px] font-semibold ${row.w1 ? "text-sky-600" : "text-gray-600"}`}>
-                {row.w1 && <Star className="w-2.5 h-2.5 inline mr-0.5 text-amber-400 fill-amber-400" />}
-                {row.v1}
-              </span>
-            </div>
-            <div className="px-2 py-2.5 text-center">
-              <span className={`text-[11px] font-semibold ${!row.w1 && row.label !== "勤務地" && row.label !== "診療科" ? "text-sky-600" : "text-gray-600"}`}>
-                {!row.w1 && row.label !== "勤務地" && row.label !== "診療科" && (
-                  <Star className="w-2.5 h-2.5 inline mr-0.5 text-amber-400 fill-amber-400" />
-                )}
-                {row.v2}
-              </span>
-            </div>
+            {row.values.map((val, ci) => {
+              const isBest = row.bestIdx === ci;
+              return (
+                <div key={ci} className="px-2 py-2.5 text-center">
+                  <span className={`text-[11px] font-semibold ${isBest ? "text-sky-600" : "text-gray-600"}`}>
+                    {isBest && <Star className="w-2.5 h-2.5 inline mr-0.5 text-amber-400 fill-amber-400" />}
+                    {val}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
 
+      {/* Winner badge */}
+      <motion.div
+        className="mx-4 mt-3 bg-gradient-to-r from-sky-50 to-amber-50 rounded-xl p-3.5 border border-amber-200 shadow-sm flex items-center gap-3"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
+        <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+          <Star className="w-5 h-5 text-amber-500 fill-amber-400" />
+        </div>
+        <div>
+          <div className="text-[9px] font-bold text-amber-600 uppercase tracking-wide">総合スコア No.1</div>
+          <div className="text-sm font-bold text-gray-800 leading-tight mt-0.5">
+            おすすめ: {winner.name}
+          </div>
+          <div className="text-[10px] text-gray-500">マッチ度 {winner.matchScore}%</div>
+        </div>
+      </motion.div>
+
       {/* Feature tags */}
       <div className="mx-4 mt-3 bg-white rounded-xl p-3.5 border border-gray-200 shadow-sm">
         <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">特徴・環境</div>
-        <div className="grid grid-cols-2 gap-3">
-          {[h1, h2].map((h) => (
+        <div className={`grid ${is3 ? "grid-cols-3" : "grid-cols-2"} gap-3`}>
+          {selected.map((h) => (
             <div key={h.id}>
-              <div className="text-[10px] font-semibold text-gray-500 mb-1.5 truncate">{h.name.slice(0, 6)}…</div>
+              <div className="text-[10px] font-semibold text-gray-500 mb-1.5 truncate">{h.name.slice(0, is3 ? 4 : 6)}…</div>
               <div className="space-y-1">
                 {h.features.map((f) => (
                   <div key={f} className="text-[9px] px-1.5 py-0.5 bg-sky-50 text-sky-700 rounded border border-sky-100 leading-tight">

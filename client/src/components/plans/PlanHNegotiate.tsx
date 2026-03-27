@@ -14,7 +14,7 @@ import {
   MessageCircle, Building2, User, BadgeDollarSign,
   CheckCircle, XCircle, RotateCcw, ChevronDown, ChevronUp,
   Clock, Send, FileText, Inbox, Settings, ChevronLeft,
-  ChevronRight, Kanban, Star, ArrowRight,
+  ChevronRight, Kanban, Star, ArrowRight, Search,
 } from "lucide-react";
 
 // ===== Shared helpers =====
@@ -632,111 +632,248 @@ function DoctorMsg() {
 
 // ===== Hospital Side =====
 
-function HospitalOfferCreate() {
-  const [targetDoc] = useState(doctors[0]);
+function HospitalOfferCompose({ onGoToPipeline }: { onGoToPipeline: () => void }) {
+  // Step: "select" | "compose" | "done"
+  const [step, setStep] = useState<"select" | "compose" | "done">("select");
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [offerSalary, setOfferSalary] = useState(2000);
-  const [bonusIncl, setBonusIncl] = useState(true);
-  const [reloc, setReloc] = useState(false);
-  const [housing, setHousing] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [workType, setWorkType] = useState<string>("常勤");
+  const [message, setMessage] = useState("");
 
-  if (sent) {
+  const MAX_MSG = 200;
+
+  const filteredDoctors = doctors.filter((d) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return d.name.toLowerCase().includes(q) || d.specialty.toLowerCase().includes(q);
+  });
+
+  const selectedDoctor = doctors.find((d) => d.id === selectedDoctorId) ?? null;
+
+  const handleSelectDoctor = (id: string) => {
+    setSelectedDoctorId(id);
+    setStep("compose");
+  };
+
+  const handleBack = () => {
+    setSelectedDoctorId(null);
+    setStep("select");
+  };
+
+  const handleSend = () => {
+    setStep("done");
+  };
+
+  const handleReset = () => {
+    setStep("select");
+    setSelectedDoctorId(null);
+    setSearch("");
+    setOfferSalary(2000);
+    setWorkType("常勤");
+    setMessage("");
+  };
+
+  // ---- Step 3: Success ----
+  if (step === "done" && selectedDoctor) {
     return (
-      <div className="h-full bg-gray-50 flex flex-col items-center justify-center px-8">
-        <div className="w-16 h-16 rounded-full bg-orange-100 text-orange-500 flex items-center justify-center mb-4">
-          <Send className="w-8 h-8" />
-        </div>
-        <div className="text-lg font-bold text-gray-800 mb-2">オファーを送信しました</div>
-        <div className="text-sm text-gray-500 text-center mb-6">
-          {targetDoc.name}先生への{offerSalary.toLocaleString()}万円のオファーを送信しました。返答をお待ちください。
-        </div>
-        <button onClick={() => setSent(false)} className="px-6 py-2.5 bg-orange-500 text-white rounded-xl font-semibold text-sm">
-          オファー管理へ
-        </button>
+      <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-emerald-500 to-emerald-700 px-8">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          className="mb-5"
+        >
+          <Send className="w-20 h-20 text-white drop-shadow-lg" />
+        </motion.div>
+        <motion.h2
+          className="text-xl font-bold text-white mb-2 text-center"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          オファーを送信しました！
+        </motion.h2>
+        <motion.p
+          className="text-emerald-100 text-sm text-center mb-8"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+        >
+          {selectedDoctor.name} 先生に送信完了
+        </motion.p>
+        <motion.div
+          className="flex flex-col gap-2.5 w-full"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <button
+            onClick={handleReset}
+            className="w-full py-3 bg-white text-emerald-700 rounded-xl font-semibold text-sm"
+          >
+            別の医師にも送る
+          </button>
+          <button
+            onClick={onGoToPipeline}
+            className="w-full py-3 bg-emerald-600 border border-emerald-400 text-white rounded-xl font-semibold text-sm"
+          >
+            パイプラインを確認
+          </button>
+        </motion.div>
       </div>
     );
   }
 
+  // ---- Step 2: Compose ----
+  if (step === "compose" && selectedDoctor) {
+    return (
+      <div className="h-full bg-gray-50 overflow-y-auto pb-16">
+        {/* Header */}
+        <div className="bg-orange-500 px-5 pt-4 pb-4 text-white flex items-center gap-3">
+          <button
+            onClick={handleBack}
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-orange-400 active:scale-95 transition-transform flex-shrink-0"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div>
+            <h1 className="text-base font-bold leading-tight">条件設定</h1>
+            <p className="text-xs text-orange-100">オファー内容を入力してください</p>
+          </div>
+        </div>
+
+        <div className="px-4 py-4 space-y-4">
+          {/* Selected doctor row */}
+          <div className="bg-white rounded-xl p-3.5 border border-orange-200 shadow-sm flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+              {selectedDoctor.initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-sm text-gray-800">{selectedDoctor.name} 先生</div>
+              <div className="text-[11px] text-gray-400">{selectedDoctor.specialty}</div>
+            </div>
+            <span className="text-sm font-bold text-orange-500">{selectedDoctor.matchScore}%</span>
+          </div>
+
+          {/* 提示年収 */}
+          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+              <BadgeDollarSign className="w-4 h-4 text-orange-500" /> 提示年収
+            </h3>
+            <SalarySlider
+              value={offerSalary} min={1000} max={3000} step={100}
+              onChange={setOfferSalary} color="bg-orange-500"
+            />
+          </div>
+
+          {/* 雇用形態 */}
+          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">雇用形態</h3>
+            <div className="flex flex-wrap gap-2">
+              {["常勤", "非常勤", "業務委託"].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setWorkType(t)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    workType === t
+                      ? "bg-orange-500 text-white"
+                      : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 診療科 */}
+          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center justify-between">
+            <h3 className="text-sm font-bold text-gray-700">診療科</h3>
+            <span className="text-sm text-orange-600 font-semibold">{selectedDoctor.specialty}</span>
+          </div>
+
+          {/* メッセージ */}
+          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-orange-500" /> メッセージ
+            </h3>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value.slice(0, MAX_MSG))}
+              placeholder="先生へのメッセージを入力..."
+              rows={4}
+              className="w-full text-xs bg-gray-50 rounded-lg px-3 py-2.5 outline-none resize-none border border-gray-200 focus:border-orange-300 leading-relaxed"
+            />
+            <div className="text-right text-[10px] text-gray-400 mt-1">
+              {message.length} / {MAX_MSG}
+            </div>
+          </div>
+
+          {/* 送信ボタン */}
+          <button
+            onClick={handleSend}
+            className="w-full py-3 bg-emerald-600 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          >
+            <Send className="w-4 h-4" /> オファーを送信
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Step 1: Doctor selection ----
   return (
-    <div className="h-full bg-gray-50 overflow-y-auto pb-16">
-      <div className="bg-orange-500 px-5 pt-4 pb-4 text-white">
+    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="bg-orange-500 px-5 pt-4 pb-4 text-white flex-shrink-0">
         <h1 className="text-lg font-bold flex items-center gap-2">
           <Send className="w-5 h-5" /> オファー作成
           <span className="text-xs font-normal text-orange-200">for Hospital</span>
         </h1>
-        <p className="text-xs text-orange-100 mt-0.5">条件を設定してオファーを送信</p>
+        <p className="text-xs text-orange-100 mt-0.5">オファーを送る医師を選択</p>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
-        {/* Target doctor */}
-        <div className="bg-white rounded-xl p-3.5 border border-gray-200 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
-            {targetDoc.initials}
-          </div>
-          <div className="flex-1">
-            <div className="font-semibold text-sm text-gray-800">{targetDoc.name} 先生</div>
-            <div className="text-[11px] text-gray-400">{targetDoc.specialty} ・ 経験{targetDoc.experience}年</div>
-          </div>
-          <span className="text-sm font-bold text-orange-500">{targetDoc.matchScore}%</span>
-        </div>
-
-        {/* Salary offer */}
-        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-          <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-            <BadgeDollarSign className="w-4 h-4 text-orange-500" /> 提示年収
-          </h3>
-          <SalarySlider
-            value={offerSalary} min={1000} max={3000} step={100}
-            onChange={setOfferSalary} color="bg-orange-500"
+      {/* Search bar */}
+      <div className="flex-shrink-0 px-4 pt-3 pb-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="医師名・診療科で検索..."
+            className="w-full pl-8 pr-3 py-2.5 text-xs bg-white border border-gray-200 rounded-xl outline-none focus:border-orange-300"
           />
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-500 bg-orange-50 rounded-lg px-3 py-2">
-            <span>先生の希望年収目安</span>
-            <span className="font-bold text-orange-600">1,800万円</span>
-          </div>
         </div>
+      </div>
 
-        {/* Benefits */}
-        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-          <h3 className="text-sm font-bold text-gray-700 mb-3">待遇・福利厚生</h3>
-          <div className="space-y-3">
-            {[
-              { label: "賞与込み", val: bonusIncl, set: setBonusIncl },
-              { label: "引越し支援", val: reloc, set: setReloc },
-              { label: "住宅手当", val: housing, set: setHousing },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">{item.label}</span>
-                <button
-                  onClick={() => item.set(!item.val)}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${item.val ? "bg-orange-500" : "bg-gray-200"}`}
-                >
-                  <motion.span
-                    animate={{ left: item.val ? "22px" : "2px" }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm"
-                  />
-                </button>
-              </div>
-            ))}
+      {/* Doctor list */}
+      <div className="flex-1 overflow-y-auto px-4 pb-20 space-y-2">
+        {filteredDoctors.length === 0 && (
+          <div className="py-10 text-center text-gray-400 text-sm">
+            該当する医師が見つかりません
           </div>
-        </div>
-
-        {/* Message */}
-        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-          <h3 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-orange-500" /> 添付メッセージ
-          </h3>
-          <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 leading-relaxed border border-gray-200">
-            田中先生の冠動脈バイパス術2,500件以上のご実績を高く評価しており、ぜひ当院の心臓外科チームに参加していただきたく、オファーさせていただきます。
-          </div>
-        </div>
-
-        <button
-          onClick={() => setSent(true)}
-          className="w-full py-3 bg-orange-500 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
-        >
-          <Send className="w-4 h-4" /> {offerSalary.toLocaleString()}万円でオファーを送信
-        </button>
+        )}
+        {filteredDoctors.map((doc, i) => (
+          <motion.button
+            key={doc.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+            onClick={() => handleSelectDoctor(doc.id)}
+            className="w-full bg-white rounded-xl p-3.5 border border-gray-200 shadow-sm flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
+          >
+            <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+              {doc.initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-sm text-gray-800">{doc.name} 先生</div>
+              <div className="text-[11px] text-gray-400">{doc.specialty} ・ 経験{doc.experience}年</div>
+            </div>
+            <span className="text-sm font-bold text-orange-500 flex-shrink-0">{doc.matchScore}%</span>
+          </motion.button>
+        ))}
       </div>
     </div>
   );
@@ -1311,7 +1448,12 @@ export default function PlanHNegotiate() {
   ];
 
   const doctorScreens = [<DoctorConditions />, <DoctorOffers />, <DoctorMsg />];
-  const hospitalScreens = [<HospitalOfferCreate />, <HospitalOfferTrack />, <HospitalOfferPipeline />, <HospitalMsg />];
+  const hospitalScreens = [
+    <HospitalOfferCompose onGoToPipeline={() => setHospitalTab(2)} />,
+    <HospitalOfferTrack />,
+    <HospitalOfferPipeline />,
+    <HospitalMsg />,
+  ];
 
   return (
     <div className="flex flex-wrap justify-center gap-10">

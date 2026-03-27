@@ -12,7 +12,7 @@ import {
   LayoutDashboard, User, Search, MessageCircle,
   ClipboardList, Users, Building2, MapPin, Award,
   FileText, Briefcase, ChevronRight, ChevronDown, Filter, X, TrendingUp, Send,
-  Eye, Target, BookmarkCheck, Heart
+  Eye, Target, BookmarkCheck, Heart, Plus, Minus, CheckCircle
 } from "lucide-react";
 
 function InitialsAvatar({ initials, size = "md", variant = "navy" }: { initials: string; size?: "sm" | "md" | "lg"; variant?: "navy" | "emerald" | "gray" }) {
@@ -242,6 +242,232 @@ function DoctorDetailProfile() {
               <div className="text-lg font-bold text-emerald-700">15</div>
               <div className="text-[10px] text-gray-500">学会発表</div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ALL_SPECIALTIES = ["内科", "外科", "心臓外科", "循環器内科", "整形外科", "小児科", "産婦人科", "麻酔科"];
+const ADDABLE_SKILLS = ["低侵襲手術", "術後管理", "後進指導", "冠動脈バイパス", "チーム医療", "緩和ケア", "救急対応", "ICU管理"];
+
+function DoctorProfileEdit() {
+  const [selectedSpecialty, setSelectedSpecialty] = useState("心臓外科");
+  const [experience, setExperience] = useState(15);
+  const [skills, setSkills] = useState(["心臓血管外科専門医", "外科指導医", "日本外科学会専門医"]);
+  const [showAddSkills, setShowAddSkills] = useState(false);
+  const [jobPrefs, setJobPrefs] = useState<Record<string, boolean>>({
+    常勤希望: true,
+    研究環境重視: false,
+    指導医希望: true,
+    遠方転居可: false,
+  });
+  const [showToast, setShowToast] = useState(false);
+
+  const handleSave = () => {
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 1500);
+  };
+
+  const removeSkill = (skill: string) => {
+    setSkills((prev) => prev.filter((s) => s !== skill));
+  };
+
+  const addSkill = (skill: string) => {
+    if (!skills.includes(skill)) {
+      setSkills((prev) => [...prev, skill]);
+    }
+  };
+
+  const togglePref = (key: string) => {
+    setJobPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  return (
+    <div className="h-full bg-gray-50 overflow-y-auto pb-16 relative">
+      {/* Toast */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ y: -48, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -48, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 340, damping: 28 }}
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-50 bg-[#1e3a5f] text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 whitespace-nowrap"
+          >
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+            プロフィールを保存しました
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Header */}
+      <div className="bg-[#1e3a5f] px-5 pt-4 pb-4 text-white flex items-center justify-between">
+        <h1 className="text-lg font-bold">プロフィール編集</h1>
+        <motion.button
+          whileTap={{ scale: 0.93 }}
+          onClick={handleSave}
+          className="px-4 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-lg"
+        >
+          保存
+        </motion.button>
+      </div>
+
+      <div className="px-5 py-4 space-y-4">
+        {/* 基本情報 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5" /> 基本情報
+          </h2>
+
+          {/* Name (read-only) */}
+          <div className="mb-3">
+            <label className="text-[11px] text-gray-400 font-medium block mb-1">氏名</label>
+            <div className="bg-gray-50 rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 border border-gray-100">
+              田中 太郎
+            </div>
+          </div>
+
+          {/* Specialty chips */}
+          <div className="mb-3">
+            <label className="text-[11px] text-gray-400 font-medium block mb-1.5">専門科</label>
+            <div className="flex flex-wrap gap-1.5">
+              {ALL_SPECIALTIES.map((sp) => (
+                <motion.button
+                  key={sp}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setSelectedSpecialty(sp)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                    selectedSpecialty === sp
+                      ? "bg-[#1e3a5f] text-white"
+                      : "bg-gray-100 text-gray-500 border border-gray-200"
+                  }`}
+                >
+                  {sp}
+                </motion.button>
+              ))}
+            </div>
+          </div>
+
+          {/* Experience stepper */}
+          <div>
+            <label className="text-[11px] text-gray-400 font-medium block mb-1.5">経験年数</label>
+            <div className="flex items-center gap-3">
+              <motion.button
+                whileTap={{ scale: 0.88 }}
+                onClick={() => setExperience((v) => Math.max(1, v - 1))}
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </motion.button>
+              <span className="text-base font-bold text-[#1e3a5f] w-12 text-center">{experience} 年</span>
+              <motion.button
+                whileTap={{ scale: 0.88 }}
+                onClick={() => setExperience((v) => Math.min(30, v + 1))}
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </motion.button>
+            </div>
+          </div>
+        </div>
+
+        {/* スキル・専門領域 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Award className="w-3.5 h-3.5" /> スキル・専門領域
+          </h2>
+
+          {/* Current skills with remove */}
+          <div className="flex flex-wrap gap-1.5 mb-3 min-h-[28px]">
+            <AnimatePresence>
+              {skills.map((skill) => (
+                <motion.div
+                  key={skill}
+                  initial={{ scale: 0.75, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.75, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 22 }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#1e3a5f] text-white text-[11px] font-semibold"
+                >
+                  {skill}
+                  <button
+                    onClick={() => removeSkill(skill)}
+                    className="ml-0.5 opacity-70 hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {/* Add skill toggle */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAddSkills((v) => !v)}
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 border border-emerald-200 rounded-lg px-3 py-1.5 bg-emerald-50"
+          >
+            <Plus className="w-3 h-3" />
+            スキルを追加
+          </motion.button>
+
+          <AnimatePresence>
+            {showAddSkills && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3 flex flex-wrap gap-1.5">
+                  {ADDABLE_SKILLS.filter((s) => !skills.includes(s)).map((s) => (
+                    <motion.button
+                      key={s}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => addSkill(s)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 text-[11px] font-semibold border border-gray-200"
+                    >
+                      <Plus className="w-3 h-3 text-emerald-500" />
+                      {s}
+                    </motion.button>
+                  ))}
+                  {ADDABLE_SKILLS.filter((s) => !skills.includes(s)).length === 0 && (
+                    <span className="text-[11px] text-gray-400">追加できるスキルはありません</span>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* 求職条件 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Briefcase className="w-3.5 h-3.5" /> 求職条件
+          </h2>
+          <div className="space-y-2.5">
+            {(Object.keys(jobPrefs) as Array<keyof typeof jobPrefs>).map((key) => (
+              <div key={key} className="flex items-center justify-between">
+                <span className="text-sm text-gray-700 font-medium">{key}</span>
+                <motion.button
+                  onClick={() => togglePref(key)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
+                    jobPrefs[key] ? "bg-[#1e3a5f]" : "bg-gray-200"
+                  }`}
+                  whileTap={{ scale: 0.93 }}
+                >
+                  <motion.div
+                    layout
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
+                    style={{ left: jobPrefs[key] ? "calc(100% - 20px)" : "4px" }}
+                  />
+                </motion.button>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1059,7 +1285,7 @@ export default function PlanBDashboard() {
     },
   ];
 
-  const doctorScreens = [<DoctorDashboard />, <DoctorDetailProfile />, <DoctorSearch />, <DoctorMsg />, <DoctorAnalytics />];
+  const doctorScreens = [<DoctorDashboard />, <DoctorProfileEdit />, <DoctorSearch />, <DoctorMsg />, <DoctorAnalytics />];
   const hospitalScreens = [<HospitalDashboard />, <HospitalJobPost />, <HospitalTalentSearch />, <HospitalMsg />];
 
   return (

@@ -16,7 +16,8 @@ import TabBar from "../TabBar";
 import { hospitals, doctors, doctorMessages, hospitalMessages, skillRadarData } from "@/lib/mockData";
 import {
   Heart, X, Send, Stethoscope, User, MessageCircle,
-  ClipboardList, Building2, MapPin, Award, FileText, Scissors, ChevronLeft, CheckCircle
+  ClipboardList, Building2, MapPin, Award, FileText, Scissors, ChevronLeft, CheckCircle,
+  Bookmark, XCircle, ChevronDown
 } from "lucide-react";
 
 function InitialsAvatar({ initials, size = "md", variant = "teal" }: { initials: string; size?: "sm" | "md" | "lg"; variant?: "teal" | "orange" | "gray" }) {
@@ -743,6 +744,101 @@ function DoctorMessages() {
   );
 }
 
+// ===== Doctor: Saved Hospitals =====
+function DoctorSavedList() {
+  const [saved, setSaved] = useState(() => hospitals.slice(0, 3).map((h) => h.id));
+
+  const savedHospitals = hospitals.filter((h) => saved.includes(h.id));
+
+  const remove = (id: string) => setSaved((prev) => prev.filter((s) => s !== id));
+
+  return (
+    <div className="h-full bg-gray-50 flex flex-col">
+      <div className="bg-teal-700 px-5 pt-4 pb-4 text-white flex-shrink-0">
+        <h1 className="text-lg font-bold flex items-center gap-2">
+          <Bookmark className="w-5 h-5" /> 保存済み病院
+        </h1>
+        <p className="text-teal-200 text-[11px] mt-0.5">{savedHospitals.length}件の病院を保存中</p>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
+        <AnimatePresence initial={false}>
+          {savedHospitals.length === 0 ? (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center gap-3 pt-20"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-teal-50 flex items-center justify-center">
+                <Heart className="w-8 h-8 text-teal-300" />
+              </div>
+              <p className="text-sm text-gray-400 font-medium">保存した病院はありません</p>
+            </motion.div>
+          ) : (
+            savedHospitals.map((h) => (
+              <motion.div
+                key={h.id}
+                layout
+                initial={{ opacity: 0, x: -20, height: 0 }}
+                animate={{ opacity: 1, x: 0, height: "auto" }}
+                exit={{ opacity: 0, x: 60, height: 0, marginBottom: 0 }}
+                transition={{ type: "spring", stiffness: 320, damping: 28 }}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+              >
+                <div className="p-3.5">
+                  <div className="flex items-start gap-3">
+                    <InitialsAvatar initials={h.initials} size="md" variant="teal" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-gray-800 leading-tight">{h.name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-100 text-teal-700 border border-teal-200 uppercase tracking-wide">
+                          LIKE済み
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{h.department} ・ {h.salary}</p>
+                      {/* Match bar */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs font-bold text-teal-700">{h.matchScore}%</span>
+                        <div className="flex-1 h-1 bg-teal-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-teal-500 rounded-full"
+                            style={{ width: `${h.matchScore}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-gray-400">マッチ度</span>
+                      </div>
+                    </div>
+                    {/* Unmatch button */}
+                    <button
+                      onClick={() => remove(h.id)}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors flex-shrink-0 mt-0.5"
+                      aria-label="アンマッチ"
+                    >
+                      <XCircle className="w-5 h-5" />
+                    </button>
+                  </div>
+                  {/* Action row */}
+                  <div className="mt-3 flex gap-2">
+                    <button className="flex-1 py-2 rounded-lg bg-teal-600 text-white text-[11px] font-semibold flex items-center justify-center gap-1.5 hover:bg-teal-700 transition-colors shadow-sm">
+                      <Send className="w-3 h-3" /> メッセージを送る
+                    </button>
+                    <button
+                      onClick={() => remove(h.id)}
+                      className="px-3 py-2 rounded-lg border border-gray-200 text-gray-400 text-[11px] font-medium hover:border-red-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                    >
+                      アンマッチ
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
 // ===== Hospital Side =====
 function HospitalSwipeFeed() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -940,6 +1036,120 @@ function HospitalMessages() {
   );
 }
 
+// ===== Hospital: Matches Received =====
+function HospitalMatchesList() {
+  const matchedDoctors = doctors.slice(0, 3);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const toggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
+
+  return (
+    <div className="h-full bg-gray-50 flex flex-col">
+      <div className="bg-orange-600 px-5 pt-4 pb-4 text-white flex-shrink-0">
+        <h1 className="text-lg font-bold flex items-center gap-2">
+          <Heart className="w-5 h-5 fill-white" /> マッチした医師
+        </h1>
+        <p className="text-orange-100 text-[11px] mt-0.5">{matchedDoctors.length}名がマッチしました</p>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
+        {matchedDoctors.map((d) => (
+          <div key={d.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-3.5">
+              <div className="flex items-start gap-3">
+                <InitialsAvatar initials={d.initials} size="md" variant="orange" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm text-gray-800">{d.name} 先生</div>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{d.specialty} ・ 経験{d.experience}年</p>
+                  {/* Match bar */}
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs font-bold text-orange-600">{d.matchScore}%</span>
+                    <div className="flex-1 h-1 bg-orange-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-orange-400 rounded-full"
+                        style={{ width: `${d.matchScore}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-gray-400">マッチ度</span>
+                  </div>
+                </div>
+              </div>
+              {/* Action row */}
+              <div className="mt-3 flex gap-2">
+                <button className="flex-1 py-2 rounded-lg bg-orange-500 text-white text-[11px] font-semibold flex items-center justify-center gap-1.5 hover:bg-orange-600 transition-colors shadow-sm">
+                  <Send className="w-3 h-3" /> メッセージを送る
+                </button>
+                <button
+                  onClick={() => toggle(d.id)}
+                  className="px-3 py-2 rounded-lg border border-gray-200 text-gray-500 text-[11px] font-medium flex items-center gap-1 hover:bg-gray-50 transition-colors"
+                >
+                  プロフィール
+                  <motion.span
+                    animate={{ rotate: expanded === d.id ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="inline-flex"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </motion.span>
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable mini-profile */}
+            <AnimatePresence initial={false}>
+              {expanded === d.id && (
+                <motion.div
+                  key="profile"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 340, damping: 30 }}
+                  className="overflow-hidden"
+                >
+                  <div className="border-t border-gray-100 px-3.5 py-3 bg-gray-50 space-y-2">
+                    {/* Skills */}
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">スキル</p>
+                      <div className="flex flex-wrap gap-1">
+                        {d.skills.map((s) => (
+                          <span key={s} className="px-2 py-0.5 rounded text-[10px] font-medium bg-teal-50 text-teal-700 border border-teal-200">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Certifications */}
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">資格</p>
+                      <div className="flex flex-wrap gap-1">
+                        {d.certifications.map((c) => (
+                          <span key={c} className="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <div className="text-center p-2 bg-white rounded-lg border border-gray-100">
+                        <div className="text-sm font-bold text-gray-700">{d.surgeries.toLocaleString()}</div>
+                        <div className="text-[9px] text-gray-400">手術件数</div>
+                      </div>
+                      <div className="text-center p-2 bg-white rounded-lg border border-gray-100">
+                        <div className="text-sm font-bold text-gray-700">{d.papers}</div>
+                        <div className="text-[9px] text-gray-400">論文数</div>
+                      </div>
+                      <div className="text-center p-2 bg-white rounded-lg border border-gray-100">
+                        <div className="text-sm font-bold text-gray-700">{d.experience}年</div>
+                        <div className="text-[9px] text-gray-400">経験年数</div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ===== Badge icon helper =====
 function BadgeIcon({ icon, count }: { icon: ReactNode; count: number }) {
   return (
@@ -972,22 +1182,30 @@ export default function PlanASwipe() {
   };
 
   const doctorTabs: { icon: ReactNode; label: string }[] = [
-    { icon: <Stethoscope className="w-4.5 h-4.5" />, label: "マッチ" },
+    { icon: <Stethoscope className="w-4.5 h-4.5" />, label: "スワイプ" },
     { icon: <User className="w-4.5 h-4.5" />, label: "プロフィール" },
     { icon: <BadgeIcon icon={<MessageCircle className="w-4.5 h-4.5" />} count={doctorUnread} />, label: "メッセージ" },
+    { icon: <Bookmark className="w-4.5 h-4.5" />, label: "保存済み" },
   ];
   const hospitalTabs: { icon: ReactNode; label: string }[] = [
     { icon: <Stethoscope className="w-4.5 h-4.5" />, label: "候補者発見" },
     { icon: <ClipboardList className="w-4.5 h-4.5" />, label: "管理" },
     { icon: <BadgeIcon icon={<MessageCircle className="w-4.5 h-4.5" />} count={hospitalUnread} />, label: "メッセージ" },
+    { icon: <Heart className="w-4.5 h-4.5" />, label: "マッチ" },
   ];
 
   const doctorScreens = [
     <DoctorSwipeFeed onGoToMessages={() => handleDoctorTabSelect(2)} />,
     <DoctorProfile />,
     <DoctorMessages />,
+    <DoctorSavedList />,
   ];
-  const hospitalScreens = [<HospitalSwipeFeed />, <HospitalCandidates />, <HospitalMessages />];
+  const hospitalScreens = [
+    <HospitalSwipeFeed />,
+    <HospitalCandidates />,
+    <HospitalMessages />,
+    <HospitalMatchesList />,
+  ];
 
   return (
     <div className="flex flex-wrap justify-center gap-10">
