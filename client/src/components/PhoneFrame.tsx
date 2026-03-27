@@ -1,4 +1,5 @@
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
+import { Signal, BatteryMedium } from "lucide-react";
 
 interface PhoneFrameProps {
   children: ReactNode;
@@ -9,17 +10,17 @@ export default function PhoneFrame({ children, label }: PhoneFrameProps) {
   return (
     <div className="flex flex-col items-center gap-3">
       {label && (
-        <span className="text-xs font-semibold tracking-wider text-indigo-300/80 uppercase">
+        <span className="text-xs font-medium tracking-wider text-gray-400 uppercase">
           {label}
         </span>
       )}
-      <div className="phone-frame bg-[#0f172a]">
+      <div className="phone-frame bg-white">
         {/* Status bar */}
-        <div className="h-11 flex items-center justify-between px-6 bg-black/30 text-white text-xs font-semibold">
-          <span className="text-sm font-bold">9:41</span>
-          <div className="flex items-center gap-1 text-[10px]">
-            <span>📶</span>
-            <span>🔋</span>
+        <div className="h-11 flex items-center justify-between px-6 bg-gray-50 text-gray-700 text-xs font-medium border-b border-gray-100">
+          <span className="text-sm font-semibold">9:41</span>
+          <div className="flex items-center gap-1.5">
+            <Signal className="w-3.5 h-3.5" />
+            <BatteryMedium className="w-4 h-4" />
           </div>
         </div>
         {/* Screen content */}
@@ -27,8 +28,8 @@ export default function PhoneFrame({ children, label }: PhoneFrameProps) {
           {children}
         </div>
         {/* Home indicator */}
-        <div className="h-[20px] bg-black/20 flex items-center justify-center">
-          <div className="w-32 h-1 rounded-full bg-white/30" />
+        <div className="h-[20px] bg-gray-50 flex items-center justify-center border-t border-gray-100">
+          <div className="w-32 h-1 rounded-full bg-gray-300" />
         </div>
       </div>
     </div>

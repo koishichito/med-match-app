@@ -12,7 +12,7 @@ export interface Doctor {
   location: string;
   status: string;
   matchScore: number;
-  avatar: string;
+  initials: string;
 }
 
 export interface Hospital {
@@ -25,7 +25,7 @@ export interface Hospital {
   salary: string;
   features: string[];
   matchScore: number;
-  avatar: string;
+  initials: string;
 }
 
 export interface Message {
@@ -34,7 +34,8 @@ export interface Message {
   preview: string;
   time: string;
   unread: boolean;
-  avatar: string;
+  initials: string;
+  isDoctor: boolean;
 }
 
 export const doctors: Doctor[] = [
@@ -50,7 +51,7 @@ export const doctors: Doctor[] = [
     location: "東京都",
     status: "転職検討中",
     matchScore: 94,
-    avatar: "👨‍⚕️",
+    initials: "田中",
   },
   {
     id: "d2",
@@ -64,7 +65,7 @@ export const doctors: Doctor[] = [
     location: "大阪府",
     status: "情報収集中",
     matchScore: 89,
-    avatar: "👩‍⚕️",
+    initials: "佐藤",
   },
   {
     id: "d3",
@@ -78,7 +79,7 @@ export const doctors: Doctor[] = [
     location: "神奈川県",
     status: "積極的に転職活動中",
     matchScore: 83,
-    avatar: "👩‍⚕️",
+    initials: "山田",
   },
   {
     id: "d4",
@@ -92,7 +93,7 @@ export const doctors: Doctor[] = [
     location: "愛知県",
     status: "転職検討中",
     matchScore: 79,
-    avatar: "👨‍⚕️",
+    initials: "高橋",
   },
 ];
 
@@ -107,7 +108,7 @@ export const hospitals: Hospital[] = [
     salary: "年収1,800万",
     features: ["心臓外科専門医", "研修指定病院", "手術件数500件/年"],
     matchScore: 92,
-    avatar: "🏥",
+    initials: "東中",
   },
   {
     id: "h2",
@@ -119,7 +120,7 @@ export const hospitals: Hospital[] = [
     salary: "年収1,600万",
     features: ["研究支援充実", "大学病院", "論文執筆サポート"],
     matchScore: 85,
-    avatar: "🏥",
+    initials: "阪大",
   },
   {
     id: "h3",
@@ -131,7 +132,7 @@ export const hospitals: Hospital[] = [
     salary: "年収1,700万",
     features: ["先端医療", "国際連携", "研究環境充実"],
     matchScore: 88,
-    avatar: "🏥",
+    initials: "慶應",
   },
   {
     id: "h4",
@@ -143,20 +144,20 @@ export const hospitals: Hospital[] = [
     salary: "年収1,500万",
     features: ["カテーテル治療", "救急対応", "チーム医療"],
     matchScore: 87,
-    avatar: "🏥",
+    initials: "横浜",
   },
 ];
 
 export const doctorMessages: Message[] = [
-  { id: "m1", name: "東京中央総合病院", preview: "ぜひ一度、見学にいらしてください...", time: "10:32", unread: true, avatar: "🏥" },
-  { id: "m2", name: "慶應義塾大学病院", preview: "先生のご経歴を拝見し、大変興味を...", time: "昨日", unread: true, avatar: "🏥" },
-  { id: "m3", name: "大阪大学医学部附属病院", preview: "研究環境についてご案内いたします...", time: "3/24", unread: false, avatar: "🏥" },
+  { id: "m1", name: "東京中央総合病院", preview: "ぜひ一度、見学にいらしてください...", time: "10:32", unread: true, initials: "東中", isDoctor: false },
+  { id: "m2", name: "慶應義塾大学病院", preview: "先生のご経歴を拝見し、大変興味を...", time: "昨日", unread: true, initials: "慶應", isDoctor: false },
+  { id: "m3", name: "大阪大学医学部附属病院", preview: "研究環境についてご案内いたします...", time: "3/24", unread: false, initials: "阪大", isDoctor: false },
 ];
 
 export const hospitalMessages: Message[] = [
-  { id: "m1", name: "田中 太郎 先生", preview: "見学の件、ぜひお願いいたします...", time: "10:45", unread: true, avatar: "👨‍⚕️" },
-  { id: "m2", name: "佐藤 花子 先生", preview: "条件面について確認させてください...", time: "昨日", unread: false, avatar: "👩‍⚕️" },
-  { id: "m3", name: "鈴木 一郎 先生", preview: "ご連絡ありがとうございます...", time: "3/23", unread: false, avatar: "👨‍⚕️" },
+  { id: "m1", name: "田中 太郎 先生", preview: "見学の件、ぜひお願いいたします...", time: "10:45", unread: true, initials: "田中", isDoctor: true },
+  { id: "m2", name: "佐藤 花子 先生", preview: "条件面について確認させてください...", time: "昨日", unread: false, initials: "佐藤", isDoctor: true },
+  { id: "m3", name: "鈴木 一郎 先生", preview: "ご連絡ありがとうございます...", time: "3/23", unread: false, initials: "鈴木", isDoctor: true },
 ];
 
 export const skillRadarData = {
