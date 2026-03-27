@@ -13,7 +13,7 @@ import {
   ClipboardList, Users, Building2, User,
   Heart, BookOpen, SkipForward, Send, Bookmark,
   TrendingUp, Sparkles, ChevronRight, Plus, X, Check,
-  MapPin, Loader2
+  MapPin, Loader2, ChevronDown, RefreshCw, Target
 } from "lucide-react";
 
 function InitialsAvatar({ initials, size = "md", variant = "indigo" }: { initials: string; size?: "sm" | "md" | "lg"; variant?: "indigo" | "purple" | "gray" }) {
@@ -209,6 +209,38 @@ function DoctorOnboardingWizard({ onComplete }: { onComplete: () => void }) {
   );
 }
 
+// AI reason data keyed by hospital id
+const AI_REASONS: Record<string, string[]> = {
+  h1: [
+    "先生の冠動脈バイパス術実績が当院の求めるスキルと92%一致",
+    "勤務エリアが希望の関東に合致",
+    "研究環境充実・論文支援制度あり",
+  ],
+  h2: [
+    "心臓血管外科での15年の経験が評価基準を大幅超過",
+    "年収2000万円以上の提示が可能",
+    "指導医制度で若手育成にも関与できる",
+  ],
+  h3: [
+    "MICS・TAVIの両スキルが求人条件と完全一致",
+    "関西エリア勤務の希望に対応",
+    "週4日勤務など柔軟な条件交渉が可能",
+  ],
+  h4: [
+    "大動脈手術の豊富な経験が即戦力として評価される",
+    "地域中核病院で手術件数・収入ともに充実",
+    "住宅補助・引越費用サポートあり",
+  ],
+};
+
+// Score breakdown per hospital
+const AI_SCORE_BREAKDOWN: Record<string, { skill: number; area: number; salary: number }> = {
+  h1: { skill: 95, area: 100, salary: 88 },
+  h2: { skill: 98, area: 80, salary: 100 },
+  h3: { skill: 92, area: 95, salary: 82 },
+  h4: { skill: 85, area: 70, salary: 90 },
+};
+
 // ===== Doctor Side =====
 function DoctorAIFeed() {
   const [hasOnboarded, setHasOnboarded] = useState(false);
@@ -216,6 +248,9 @@ function DoctorAIFeed() {
   const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(3);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [expandedReason, setExpandedReason] = useState<Set<string>>(new Set());
+  const [feedKey, setFeedKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const allReasons = [
     "冠動脈バイパス術の実績（2,500件+）が、この病院の求める条件と高い一致度を示しています。",
@@ -237,6 +272,23 @@ function DoctorAIFeed() {
     }, 800);
   };
 
+  const handleRefresh = () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setFeedKey((k) => k + 1);
+      setIsRefreshing(false);
+    }, 600);
+  };
+
+  const toggleReason = (hid: string) => {
+    setExpandedReason((prev) => {
+      const next = new Set(Array.from(prev));
+      next.has(hid) ? next.delete(hid) : next.add(hid);
+      return next;
+    });
+  };
+
   if (!hasOnboarded) {
     return <DoctorOnboardingWizard onComplete={() => setHasOnboarded(true)} />;
   }
@@ -244,10 +296,22 @@ function DoctorAIFeed() {
   return (
     <div className="h-full bg-gray-50 overflow-y-auto pb-16">
       <div className="bg-indigo-700 px-5 pt-4 pb-4 text-white">
-        <h1 className="text-lg font-bold flex items-center gap-2">
-          <Lightbulb className="w-5 h-5" /> MedRecommend
-        </h1>
-        <p className="text-xs text-indigo-200 mt-0.5">あなたに最適な病院をレコメンド</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold flex items-center gap-2">
+              <Lightbulb className="w-5 h-5" /> MedRecommend
+            </h1>
+            <p className="text-xs text-indigo-200 mt-0.5">あなたに最適な病院をレコメンド</p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-xs font-semibold text-white disabled:opacity-60 transition-opacity"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            更新
+          </button>
+        </div>
       </div>
 
       <div className="mx-4 mt-3 p-3 bg-indigo-50 rounded-xl border border-indigo-200">
@@ -265,18 +329,21 @@ function DoctorAIFeed() {
       </div>
 
       <div className="px-4 mt-3 space-y-3">
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {visibleHospitals.map((h, i) => {
             const liked = likedIds.has(h.id);
             const reasonIdx = i % allReasons.length;
             const timeIdx = i % allTimes.length;
+            const isReasonExpanded = expandedReason.has(h.id);
+            const aiReasons = AI_REASONS[h.id] ?? AI_REASONS["h1"];
+            const scores = AI_SCORE_BREAKDOWN[h.id] ?? AI_SCORE_BREAKDOWN["h1"];
             return (
               <motion.div
-                key={h.id}
-                initial={{ opacity: 0, y: 20 }}
+                key={`${feedKey}-${h.id}`}
+                initial={{ opacity: 0, y: -24 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -60, scale: 0.95 }}
-                transition={{ delay: i * 0.08 }}
+                exit={{ opacity: 0, y: 30, scale: 0.95 }}
+                transition={{ delay: i * 0.09, duration: 0.32, ease: "easeOut" }}
                 className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200"
               >
                 <div className="flex items-center gap-2 px-4 pt-3">
@@ -311,11 +378,79 @@ function DoctorAIFeed() {
                       className="h-full bg-indigo-500 rounded-full"
                       initial={{ width: 0 }}
                       animate={{ width: `${h.matchScore}%` }}
-                      transition={{ duration: 0.7, ease: "easeOut", delay: i * 0.08 + 0.2 }}
+                      transition={{ duration: 0.7, ease: "easeOut", delay: i * 0.09 + 0.2 }}
                     />
                   </div>
                   <span className="text-sm font-bold text-indigo-600">{h.matchScore}%</span>
                 </div>
+
+                {/* AI Reason expand button */}
+                <button
+                  onClick={() => toggleReason(h.id)}
+                  className="w-full flex items-center justify-center gap-1 py-1.5 text-[11px] font-semibold text-indigo-500 border-t border-gray-100 bg-indigo-50/40 hover:bg-indigo-50 transition-colors"
+                >
+                  なぜおすすめ？
+                  <motion.span
+                    animate={{ rotate: isReasonExpanded ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="inline-flex"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </motion.span>
+                </button>
+
+                {/* Expandable AI Reason Panel */}
+                <AnimatePresence>
+                  {isReasonExpanded && (
+                    <motion.div
+                      key="reason-panel"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mx-3 mb-3 mt-1 p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+                        <div className="text-[11px] font-bold text-indigo-700 mb-2 flex items-center gap-1.5">
+                          <Target className="w-3.5 h-3.5" /> マッチ理由
+                        </div>
+                        <ul className="space-y-1.5 mb-3">
+                          {aiReasons.map((reason, ri) => (
+                            <li key={ri} className="flex items-start gap-1.5">
+                              <span className="flex-shrink-0 w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center mt-0.5">
+                                <Check className="w-2.5 h-2.5 text-emerald-600" />
+                              </span>
+                              <span className="text-[11px] text-gray-700 leading-relaxed">{reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="text-[10px] font-bold text-indigo-600 mb-1.5">スコア内訳</div>
+                        <div className="space-y-1">
+                          {(
+                            [
+                              { label: "スキル", value: scores.skill },
+                              { label: "エリア", value: scores.area },
+                              { label: "年収", value: scores.salary },
+                            ] as const
+                          ).map(({ label, value }) => (
+                            <div key={label} className="flex items-center gap-2">
+                              <span className="text-[10px] text-gray-500 w-8 flex-shrink-0">{label}</span>
+                              <div className="flex-1 h-1.5 bg-indigo-100 rounded-full overflow-hidden">
+                                <motion.div
+                                  className="h-full bg-indigo-500 rounded-full"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${value}%` }}
+                                  transition={{ duration: 0.5, ease: "easeOut" }}
+                                />
+                              </div>
+                              <span className="text-[10px] font-bold text-indigo-600 w-7 text-right">{value}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div className="flex border-t border-gray-100">
                   <button
@@ -505,29 +640,86 @@ function DoctorSkillTags() {
   );
 }
 
+type NotifItem = {
+  icon: ReactNode;
+  bg: string;
+  color: string;
+  title: string;
+  desc: string;
+  time: string;
+  actionLabel: string;
+};
+
 function DoctorNotifications() {
   const [readIds, setReadIds] = useState<Set<number>>(new Set());
-  const notifs = [
-    { icon: <Sparkles className="w-4 h-4" />, bg: "bg-indigo-50", color: "text-indigo-600", title: "新しいマッチ", desc: "東京中央総合病院があなたに「興味あり」を送りました。マッチ率92%です。", time: "10分前" },
-    { icon: <Send className="w-4 h-4" />, bg: "bg-violet-50", color: "text-violet-600", title: "スカウト受信", desc: "慶應義塾大学病院から「先生の冠動脈バイパス術の実績に注目しています」とのスカウトが届きました。", time: "1時間前" },
-    { icon: <TrendingUp className="w-4 h-4" />, bg: "bg-emerald-50", color: "text-emerald-600", title: "分析更新", desc: "プロフィール閲覧数が先週比+40%増加しました。", time: "3時間前" },
-    { icon: <Sparkles className="w-4 h-4" />, bg: "bg-indigo-50", color: "text-indigo-600", title: "新しいレコメンド", desc: "横浜みなと医療センターがあなたのスキルにマッチしています（87%）。", time: "昨日" },
+  const [selectedNotif, setSelectedNotif] = useState<number | null>(null);
+
+  const notifs: NotifItem[] = [
+    {
+      icon: <Sparkles className="w-4 h-4" />,
+      bg: "bg-indigo-50",
+      color: "text-indigo-600",
+      title: "新しいマッチ",
+      desc: "東京中央総合病院があなたに「興味あり」を送りました。マッチ率92%です。",
+      time: "10分前",
+      actionLabel: "病院の詳細を見る",
+    },
+    {
+      icon: <Send className="w-4 h-4" />,
+      bg: "bg-violet-50",
+      color: "text-violet-600",
+      title: "スカウト受信",
+      desc: "慶應義塾大学病院から「先生の冠動脈バイパス術の実績に注目しています」とのスカウトが届きました。",
+      time: "1時間前",
+      actionLabel: "スカウトに返信する",
+    },
+    {
+      icon: <TrendingUp className="w-4 h-4" />,
+      bg: "bg-emerald-50",
+      color: "text-emerald-600",
+      title: "分析更新",
+      desc: "プロフィール閲覧数が先週比+40%増加しました。",
+      time: "3時間前",
+      actionLabel: "分析レポートを確認",
+    },
+    {
+      icon: <Sparkles className="w-4 h-4" />,
+      bg: "bg-indigo-50",
+      color: "text-indigo-600",
+      title: "新しいレコメンド",
+      desc: "横浜みなと医療センターがあなたのスキルにマッチしています（87%）。",
+      time: "昨日",
+      actionLabel: "レコメンドを確認する",
+    },
   ];
 
+  const handleNotifClick = (i: number) => {
+    setReadIds((prev) => new Set(Array.from(prev).concat(i)));
+    setSelectedNotif(i);
+  };
+
+  const detailNotif = selectedNotif !== null ? notifs[selectedNotif] : null;
+
   return (
-    <div className="h-full bg-gray-50">
+    <div className="h-full bg-gray-50 relative overflow-hidden">
+      {/* Header */}
       <div className="bg-indigo-700 px-5 pt-4 pb-4 text-white">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold flex items-center gap-2">
             <Bell className="w-5 h-5" /> 通知
           </h1>
           {readIds.size < notifs.length && (
-            <button onClick={() => setReadIds(new Set(notifs.map((_, i) => i)))} className="text-xs text-indigo-200 font-medium">
+            <button
+              onClick={() => setReadIds(new Set(notifs.map((_, i) => i)))}
+              className="text-xs text-indigo-200 font-medium"
+            >
               すべて既読
             </button>
           )}
         </div>
       </div>
+
+      {/* Notification list */}
       <div className="divide-y divide-gray-100">
         <AnimatePresence>
           {notifs.map((n, i) => {
@@ -536,12 +728,16 @@ function DoctorNotifications() {
               <motion.div
                 key={i}
                 layout
-                onClick={() => setReadIds((prev) => new Set(Array.from(prev).concat(i)))}
+                onClick={() => handleNotifClick(i)}
                 className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors ${isNew ? "bg-indigo-50/60" : "bg-white"}`}
               >
-                <div className={`w-8 h-8 rounded-lg ${n.bg} ${n.color} flex items-center justify-center flex-shrink-0`}>{n.icon}</div>
+                <div className={`w-8 h-8 rounded-lg ${n.bg} ${n.color} flex items-center justify-center flex-shrink-0`}>
+                  {n.icon}
+                </div>
                 <div className="flex-1">
-                  <div className="text-xs text-gray-800 leading-relaxed"><strong>{n.title}</strong> {n.desc}</div>
+                  <div className="text-xs text-gray-800 leading-relaxed">
+                    <strong>{n.title}</strong> {n.desc}
+                  </div>
                   <div className="text-[11px] text-gray-400 mt-1">{n.time}</div>
                 </div>
                 {isNew && <span className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0 mt-1" />}
@@ -550,6 +746,60 @@ function DoctorNotifications() {
           })}
         </AnimatePresence>
       </div>
+
+      {/* Slide-in detail panel */}
+      <AnimatePresence>
+        {detailNotif !== null && (
+          <motion.div
+            key="notif-detail"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.28, ease: "easeInOut" }}
+            className="absolute inset-0 bg-white flex flex-col z-10"
+          >
+            {/* Detail header */}
+            <div className="bg-indigo-700 px-4 pt-4 pb-3 text-white flex items-center gap-3">
+              <button
+                onClick={() => setSelectedNotif(null)}
+                className="text-indigo-200 text-xs font-semibold flex items-center gap-1"
+              >
+                <ChevronDown className="w-3.5 h-3.5 rotate-90" /> 戻る
+              </button>
+              <span className="flex-1 text-sm font-semibold">{detailNotif.title}</span>
+            </div>
+
+            {/* Detail body */}
+            <div className="flex-1 overflow-y-auto px-5 py-5">
+              {/* Large icon */}
+              <div className={`w-16 h-16 rounded-2xl ${detailNotif.bg} ${detailNotif.color} flex items-center justify-center mx-auto mb-4`}>
+                <span className="scale-150">{detailNotif.icon}</span>
+              </div>
+
+              <h2 className="text-base font-bold text-gray-800 text-center mb-1">{detailNotif.title}</h2>
+              <p className="text-[11px] text-gray-400 text-center mb-4">{detailNotif.time}</p>
+
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 mb-5">
+                <p className="text-sm text-gray-700 leading-relaxed">{detailNotif.desc}</p>
+              </div>
+
+              {/* Action buttons */}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold text-sm mb-2.5"
+              >
+                {detailNotif.actionLabel}
+              </motion.button>
+              <button
+                onClick={() => setSelectedNotif(null)}
+                className="w-full py-2.5 text-sm font-medium text-gray-400"
+              >
+                閉じる
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

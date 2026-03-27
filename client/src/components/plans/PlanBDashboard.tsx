@@ -14,6 +14,10 @@ import {
   FileText, Briefcase, ChevronRight, ChevronDown, Filter, X, TrendingUp, Send,
   Eye, Target, BookmarkCheck, Heart, Plus, Minus, CheckCircle
 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis,
+} from "recharts";
 
 function InitialsAvatar({ initials, size = "md", variant = "navy" }: { initials: string; size?: "sm" | "md" | "lg"; variant?: "navy" | "emerald" | "gray" }) {
   const sizeMap = { sm: "w-9 h-9 text-xs", md: "w-11 h-11 text-sm", lg: "w-14 h-14 text-lg" };
@@ -797,30 +801,47 @@ function DoctorMsg() {
   );
 }
 
+// ─── DoctorAnalytics data constants ──────────────────────────────────────────
+const WEEKLY_DATA = [
+  { day: "月", scouts: 2, views: 18 },
+  { day: "火", scouts: 5, views: 24 },
+  { day: "水", scouts: 3, views: 15 },
+  { day: "木", scouts: 8, views: 31 },
+  { day: "金", scouts: 4, views: 22 },
+  { day: "土", scouts: 1, views: 8 },
+  { day: "日", scouts: 2, views: 12 },
+];
+
+const SKILL_MATCH_DATA = [
+  { subject: "手術実績", score: 95 },
+  { subject: "論文数", score: 78 },
+  { subject: "指導歴", score: 85 },
+  { subject: "専門資格", score: 90 },
+  { subject: "英語力", score: 60 },
+];
+
+const FUNNEL_DATA = [
+  { label: "閲覧", count: 147 },
+  { label: "スカウト", count: 23 },
+  { label: "返信", count: 8 },
+  { label: "面接", count: 3 },
+];
+
 function DoctorAnalytics() {
+  const [likedHospitals, setLikedHospitals] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(hospitals.slice(0, 3).map((h) => [h.id, true]))
+  );
+
+  const toggleLike = (id: string) =>
+    setLikedHospitals((prev) => ({ ...prev, [id]: !prev[id] }));
+
   const statCards = [
     { icon: Eye, label: "プロフィール閲覧数", value: "147", unit: "回", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },
     { icon: Target, label: "スカウト受信数", value: "23", unit: "件", color: "text-orange-500", bg: "bg-orange-50", border: "border-orange-100" },
     { icon: TrendingUp, label: "マッチング率", value: "73", unit: "%", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
   ];
 
-  const weekBars = [
-    { day: "月", height: 45 },
-    { day: "火", height: 70 },
-    { day: "水", height: 55 },
-    { day: "木", height: 90 },
-    { day: "金", height: 80 },
-    { day: "土", height: 35 },
-    { day: "日", height: 20 },
-  ];
-
-  const skills = [
-    { name: "心臓外科", pct: 92 },
-    { name: "冠動脈バイパス", pct: 87 },
-    { name: "低侵襲手術", pct: 74 },
-    { name: "術後管理", pct: 68 },
-    { name: "後進指導", pct: 60 },
-  ];
+  const funnelMax = FUNNEL_DATA[0].count;
 
   return (
     <div className="h-full bg-gray-50 overflow-y-auto pb-16">
@@ -831,11 +852,9 @@ function DoctorAnalytics() {
         <p className="text-xs text-blue-200 mt-0.5">過去30日間のデータ</p>
       </div>
 
-      {/* Stat Cards */}
+      {/* ── Stat Cards ── */}
       <div className="px-5 -mt-3 mb-4">
-        <div className="mb-2.5">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-4 mb-2.5">マッチング概要</h2>
-        </div>
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-4 mb-2.5">マッチング概要</h2>
         <div className="grid grid-cols-3 gap-2">
           {statCards.map((s, i) => {
             const Icon = s.icon;
@@ -850,7 +869,9 @@ function DoctorAnalytics() {
                 <div className={`w-7 h-7 ${s.bg} rounded-lg flex items-center justify-center mx-auto mb-1.5`}>
                   <Icon className={`w-3.5 h-3.5 ${s.color}`} />
                 </div>
-                <div className={`text-xl font-bold ${s.color}`}>{s.value}<span className="text-[10px] font-medium ml-0.5">{s.unit}</span></div>
+                <div className={`text-xl font-bold ${s.color}`}>
+                  {s.value}<span className="text-[10px] font-medium ml-0.5">{s.unit}</span>
+                </div>
                 <div className="text-[9px] text-gray-400 mt-0.5 leading-tight">{s.label}</div>
               </motion.div>
             );
@@ -858,80 +879,158 @@ function DoctorAnalytics() {
         </div>
       </div>
 
-      {/* Weekly Scout Trend */}
+      {/* ── Weekly Bar Chart (Recharts) ── */}
       <div className="px-5 mb-4">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">週別スカウト推移</h2>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-          <div className="flex items-end justify-between gap-1.5 h-20">
-            {weekBars.map((b, i) => (
-              <div key={b.day} className="flex flex-col items-center gap-1 flex-1">
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${b.height}%` }}
-                  transition={{ duration: 0.6, ease: "easeOut", delay: i * 0.07 }}
-                  className="w-full rounded-t-md bg-[#1e3a5f] self-end"
-                  style={{ maxHeight: "100%" }}
-                />
-                <span className="text-[9px] text-gray-400">{b.day}</span>
-              </div>
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">週別アクティビティ</h2>
+        <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-200">
+          {/* Legend */}
+          <div className="flex items-center gap-3 mb-2 justify-end">
+            <span className="flex items-center gap-1 text-[10px] text-gray-500">
+              <span className="w-2.5 h-2.5 rounded-sm inline-block bg-[#1e3a5f]" />閲覧
+            </span>
+            <span className="flex items-center gap-1 text-[10px] text-gray-500">
+              <span className="w-2.5 h-2.5 rounded-sm inline-block bg-[#93c5fd]" />スカウト
+            </span>
+          </div>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={WEEKLY_DATA} barSize={8} barGap={2} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis
+                dataKey="day"
+                tick={{ fontSize: 9, fill: "#9ca3af" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 9, fill: "#9ca3af" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{ fontSize: 10, borderRadius: 8, border: "1px solid #e5e7eb", padding: "4px 8px" }}
+                itemStyle={{ color: "#374151" }}
+                cursor={{ fill: "#f9fafb" }}
+              />
+              <Bar dataKey="views" name="閲覧" fill="#1e3a5f" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="scouts" name="スカウト" fill="#93c5fd" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* ── Skill Radar Chart ── */}
+      <div className="px-5 mb-4">
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">スキルマッチレーダー</h2>
+        <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-200 flex flex-col items-center">
+          <ResponsiveContainer width="100%" height={160}>
+            <RadarChart data={SKILL_MATCH_DATA} margin={{ top: 8, right: 16, bottom: 8, left: 16 }}>
+              <PolarGrid stroke="#e5e7eb" />
+              <PolarAngleAxis
+                dataKey="subject"
+                tick={{ fontSize: 9, fill: "#6b7280" }}
+              />
+              <Radar
+                name="スコア"
+                dataKey="score"
+                stroke="#1e3a5f"
+                fill="#1e3a5f"
+                fillOpacity={0.25}
+                strokeWidth={1.5}
+              />
+              <Tooltip
+                contentStyle={{ fontSize: 10, borderRadius: 8, border: "1px solid #e5e7eb", padding: "4px 8px" }}
+              />
+            </RadarChart>
+          </ResponsiveContainer>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-1 mb-1">
+            {SKILL_MATCH_DATA.map((d) => (
+              <span key={d.subject} className="text-[9px] text-gray-500">
+                {d.subject} <span className="font-bold text-[#1e3a5f]">{d.score}</span>
+              </span>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Skill Match Bars */}
+      {/* ── Match Funnel ── */}
       <div className="px-5 mb-4">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">スキル別マッチ度</h2>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 space-y-3">
-          {skills.map((skill, i) => (
-            <motion.div
-              key={skill.name}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.08 + 0.3 }}
-            >
-              <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-gray-600 font-medium">{skill.name}</span>
-                <span className="text-[#1e3a5f] font-bold">{skill.pct}%</span>
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">マッチングファネル</h2>
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 space-y-2.5">
+          {FUNNEL_DATA.map((item, i) => {
+            const pct = (item.count / funnelMax) * 100;
+            const opacities = ["opacity-100", "opacity-80", "opacity-60", "opacity-40"];
+            return (
+              <div key={item.label}>
+                <div className="flex items-center justify-between text-[11px] mb-1">
+                  <span className="text-gray-600 font-medium">{item.label}</span>
+                  <span className="font-bold text-[#1e3a5f]">{item.count}</span>
+                </div>
+                <div className="h-5 bg-gray-100 rounded-md overflow-hidden">
+                  <motion.div
+                    className={`h-full bg-[#1e3a5f] ${opacities[i]} rounded-md`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.7, ease: "easeOut", delay: i * 0.1 + 0.2 }}
+                  />
+                </div>
               </div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-[#1e3a5f] rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${skill.pct}%` }}
-                  transition={{ duration: 0.7, ease: "easeOut", delay: i * 0.08 + 0.4 }}
-                />
-              </div>
-            </motion.div>
-          ))}
+            );
+          })}
+          <div className="pt-1 text-[10px] text-gray-400 text-right">
+            面接転換率 <span className="font-bold text-emerald-600">13.0%</span>
+          </div>
         </div>
       </div>
 
-      {/* Saved Hospitals */}
+      {/* ── Hospital Interest List ── */}
       <div className="px-5 mb-4">
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
           <BookmarkCheck className="w-3.5 h-3.5" /> 気になる病院
         </h2>
         <div className="space-y-2">
-          {hospitals.slice(0, 3).map((h, i) => (
-            <motion.div
-              key={h.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.09 + 0.5 }}
-              className="bg-white rounded-xl p-3 shadow-sm border border-gray-200 flex items-center gap-3"
-            >
-              <InitialsAvatar initials={h.initials} variant="navy" size="sm" />
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm text-gray-800 truncate">{h.name}</div>
-                <div className="text-[11px] text-gray-400">{h.department} ・ {h.location}</div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-                <span className="text-sm font-bold text-emerald-600">{h.matchScore}%</span>
-              </div>
-            </motion.div>
-          ))}
+          {hospitals.slice(0, 3).map((h, i) => {
+            const liked = likedHospitals[h.id];
+            return (
+              <motion.div
+                key={h.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.09 + 0.5 }}
+                className="bg-white rounded-xl p-3 shadow-sm border border-gray-200 flex items-center gap-3"
+              >
+                <InitialsAvatar initials={h.initials} variant="navy" size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm text-gray-800 truncate">{h.name}</div>
+                  <div className="text-[11px] text-gray-400">{h.department} ・ {h.location}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => toggleLike(h.id)}
+                    className="focus:outline-none"
+                  >
+                    <Heart
+                      className={`w-4 h-4 transition-colors ${
+                        liked ? "text-rose-500 fill-rose-500" : "text-gray-300 fill-transparent"
+                      }`}
+                    />
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    onClick={() => toggleLike(h.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${
+                      liked
+                        ? "bg-rose-50 text-rose-500 border border-rose-200"
+                        : "bg-[#1e3a5f] text-white"
+                    }`}
+                  >
+                    {liked ? "解除" : "興味あり"}
+                  </motion.button>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </div>

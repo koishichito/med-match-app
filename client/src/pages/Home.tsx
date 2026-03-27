@@ -27,6 +27,8 @@ const plans = [
     borderActive: "ring-teal-400",
     icon: <Stethoscope className="w-5 h-5" />,
     tags: ["直感的操作", "スキル可視化", "カード型UI"],
+    screens: 4,
+    highlight: "ドラッグ&ドロップ",
   },
   {
     id: "b",
@@ -39,6 +41,8 @@ const plans = [
     borderActive: "ring-slate-400",
     icon: <LayoutDashboard className="w-5 h-5" />,
     tags: ["データドリブン", "詳細検索", "プロフェッショナル"],
+    screens: 5,
+    highlight: "分析ダッシュボード",
   },
   {
     id: "c",
@@ -51,18 +55,22 @@ const plans = [
     borderActive: "ring-indigo-400",
     icon: <Lightbulb className="w-5 h-5" />,
     tags: ["レコメンド", "パーソナライズ", "対話型UX"],
+    screens: 4,
+    highlight: "AIオンボーディング",
   },
   {
     id: "f",
     title: "案F: 比較・意思決定型",
     subtitle: "MedCompare",
-    desc: "複数病院をレーダーチャートで視覚比較。採用基準の重み付け設定で合理的に選択。",
+    desc: "最大3病院をレーダーチャートで視覚比較。採用基準の重み付け設定で合理的に選択。",
     accentColor: "#0284c7",
     accentLight: "#e0f2fe",
     bgGradient: "from-sky-500 to-sky-700",
     borderActive: "ring-sky-400",
     icon: <GitCompare className="w-5 h-5" />,
-    tags: ["並列比較", "レーダーチャート", "スコアリング"],
+    tags: ["3院並列比較", "レーダーチャート", "スコアリング"],
+    screens: 3,
+    highlight: "3病院同時比較",
   },
   {
     id: "i",
@@ -75,6 +83,8 @@ const plans = [
     borderActive: "ring-rose-400",
     icon: <Grid2x2 className="w-5 h-5" />,
     tags: ["症例ギャラリー", "バッジ", "実績可視化"],
+    screens: 4,
+    highlight: "症例詳細ビュー",
   },
   {
     id: "h",
@@ -87,6 +97,8 @@ const plans = [
     borderActive: "ring-emerald-400",
     icon: <BadgeDollarSign className="w-5 h-5" />,
     tags: ["オファー管理", "条件交渉", "年収スライダー"],
+    screens: 4,
+    highlight: "オファー作成フロー",
   },
 ];
 
@@ -196,6 +208,16 @@ export default function Home() {
                     {tag}
                   </span>
                 ))}
+              </div>
+              {/* Screen count + highlight */}
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100/80">
+                <span className="text-[9px] text-gray-400">{p.screens}画面</span>
+                <span
+                  className="text-[9px] font-semibold transition-all duration-200"
+                  style={{ color: activePlan === i ? p.accentColor : "#d1d5db" }}
+                >
+                  {p.highlight}
+                </span>
               </div>
             </motion.button>
           ))}

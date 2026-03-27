@@ -16,7 +16,7 @@ import {
 import {
   GitCompare, MessageCircle, Building2, User,
   CheckCircle2, Circle, SlidersHorizontal, Users, Star, BarChart3,
-  Send, FileText, ChevronLeft,
+  Send, FileText, ChevronLeft, X, GitMerge,
 } from "lucide-react";
 
 const radarChartData = skillRadarData.labels.map((label, i) => ({
@@ -501,15 +501,164 @@ const CRITERIA = [
   { label: "エリア適合", weight: 8, color: "bg-amber-100" },
 ];
 
+// ===== Doctor Comparison Modal =====
+
+type ScoredDoctor = {
+  id: string;
+  name: string;
+  specialty: string;
+  experience: number;
+  matchScore: number;
+  initials: string;
+  breakdown: { label: string; score: number }[];
+};
+
+function DoctorCompareModal({
+  doctors: selected,
+  priorityIds,
+  onTogglePriority,
+  onClose,
+}: {
+  doctors: ScoredDoctor[];
+  priorityIds: string[];
+  onTogglePriority: (id: string) => void;
+  onClose: () => void;
+}) {
+  const colCount = selected.length;
+  const gridClass =
+    colCount === 3 ? "grid-cols-3" : colCount === 2 ? "grid-cols-2" : "grid-cols-1";
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-30 bg-black/50 flex flex-col justify-end"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
+        className="bg-white rounded-t-2xl overflow-hidden flex flex-col max-h-[88%]"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
+      >
+        {/* Modal header */}
+        <div className="bg-amber-600 px-4 pt-4 pb-3 text-white flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-base font-bold flex items-center gap-1.5">
+              <GitMerge className="w-4 h-4" /> 候補者比較
+            </h2>
+            <p className="text-[11px] text-amber-200 mt-0.5">{colCount}名を並べて比較</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="overflow-y-auto flex-1 px-3 py-3 space-y-3">
+          {/* Name + score row */}
+          <div className={`grid ${gridClass} gap-2`}>
+            {selected.map((d) => {
+              const isPriority = priorityIds.includes(d.id);
+              return (
+                <div
+                  key={d.id}
+                  className={`rounded-xl p-3 border text-center relative ${
+                    isPriority
+                      ? "border-amber-400 bg-amber-50"
+                      : "border-gray-200 bg-gray-50"
+                  }`}
+                >
+                  {isPriority && (
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                      <Star className="w-2.5 h-2.5 fill-white" /> 優先
+                    </span>
+                  )}
+                  <Avatar initials={d.initials} size="sm" variant={isPriority ? "amber" : "gray"} />
+                  <div className="mt-1.5 font-semibold text-[11px] text-gray-800 leading-tight">{d.name}</div>
+                  <div className="text-[10px] text-gray-400 truncate">{d.specialty}</div>
+                  <div className="text-lg font-bold text-amber-600 mt-1">{d.matchScore}</div>
+                  <div className="text-[9px] text-gray-400">総合スコア</div>
+                  <button
+                    onClick={() => onTogglePriority(d.id)}
+                    className={`mt-2 w-full py-1 rounded-lg text-[10px] font-semibold transition-colors ${
+                      isPriority
+                        ? "bg-amber-500 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-amber-100 hover:text-amber-700"
+                    }`}
+                  >
+                    {isPriority ? "推薦済み" : "推薦"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Breakdown bars */}
+          <div className="bg-white rounded-xl border border-gray-200 p-3">
+            <div className="text-[10px] font-bold text-gray-400 uppercase mb-2.5">評価項目別スコア</div>
+            {selected[0]?.breakdown.map((item, bi) => (
+              <div key={item.label} className="mb-2.5 last:mb-0">
+                <div className="text-[10px] text-gray-500 font-medium mb-1">{item.label}</div>
+                <div className={`grid ${gridClass} gap-2`}>
+                  {selected.map((d) => {
+                    const score = d.breakdown[bi]?.score ?? 0;
+                    return (
+                      <div key={d.id} className="flex items-center gap-1.5">
+                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full bg-amber-500 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${score}%` }}
+                            transition={{ duration: 0.6, ease: "easeOut", delay: bi * 0.05 }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-semibold text-gray-600 w-6 text-right flex-shrink-0">
+                          {score}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Experience row */}
+          <div className={`grid ${gridClass} gap-2`}>
+            {selected.map((d) => (
+              <div key={d.id} className="bg-white rounded-xl border border-gray-200 p-2.5 text-center">
+                <div className="text-[10px] text-gray-400">経験年数</div>
+                <div className="text-base font-bold text-gray-700 mt-0.5">{d.experience}年</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ===== Hospital Candidate Score =====
+
 function HospitalCandidateScore() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSelected, setCompareSelected] = useState<string[]>([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  const [priorityIds, setPriorityIds] = useState<string[]>([]);
 
-  const scored = doctors.map((d) => ({
+  const scored: ScoredDoctor[] = doctors.map((d) => ({
     ...d,
     breakdown: [
       { label: "専門スキル", score: d.skills.length >= 4 ? 95 : d.skills.length === 3 ? 82 : 70 },
       { label: "経験年数", score: Math.min(100, d.experience * 5) },
-      { label: "論文実績", score: Math.min(100, d.papers * 2.5) },
+      { label: "論文実績", score: Math.min(100, Math.round(d.papers * 2.5)) },
       { label: "指導資格", score: d.certifications.length > 1 ? 90 : 65 },
     ],
   }));
@@ -517,19 +666,56 @@ function HospitalCandidateScore() {
   const toggleExpand = (id: string) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
+  const toggleCompareSelect = (id: string) => {
+    setCompareSelected((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((x) => x !== id);
+      }
+      if (prev.length >= 3) return prev;
+      return prev.concat([id]);
+    });
+  };
+
+  const togglePriority = (id: string) => {
+    setPriorityIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : prev.concat([id])
+    );
+  };
+
+  const selectedDoctors = scored.filter((d) => compareSelected.includes(d.id));
+
   return (
     <div className="h-full bg-gray-50 overflow-y-auto pb-16">
       <div className="bg-amber-600 px-5 pt-4 pb-4 text-white">
-        <h1 className="text-lg font-bold flex items-center gap-2">
-          <BarChart3 className="w-5 h-5" /> MedCompare
-          <span className="text-xs font-normal text-amber-200">for Hospital</span>
-        </h1>
-        <p className="text-xs text-amber-200 mt-0.5">採用基準に基づくスコアリング</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" /> MedCompare
+              <span className="text-xs font-normal text-amber-200">for Hospital</span>
+            </h1>
+            <p className="text-xs text-amber-200 mt-0.5">採用基準に基づくスコアリング</p>
+          </div>
+          <button
+            onClick={() => {
+              setCompareMode((prev) => !prev);
+              setCompareSelected([]);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+              compareMode
+                ? "bg-white text-amber-700"
+                : "bg-amber-500 text-white border border-amber-400"
+            }`}
+          >
+            {compareMode ? "キャンセル" : "複数比較"}
+          </button>
+        </div>
       </div>
 
       <div className="px-4 py-3 space-y-3">
         {scored.map((d, idx) => {
           const isExpanded = expandedId === d.id;
+          const isChecked = compareSelected.includes(d.id);
+          const isPriority = priorityIds.includes(d.id);
           return (
             <motion.div
               key={d.id}
@@ -537,51 +723,77 @@ function HospitalCandidateScore() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.08 }}
               className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-colors ${
+                isChecked ? "border-amber-400 ring-1 ring-amber-200" :
                 isExpanded ? "border-amber-300" : "border-gray-200"
               }`}
             >
-              {/* Clickable header area */}
-              <button
-                onClick={() => toggleExpand(d.id)}
-                className="w-full text-left p-3.5"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <Avatar initials={d.initials} size="sm" variant="amber" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm text-gray-800">{d.name}</div>
-                    <div className="text-[11px] text-gray-400">{d.specialty} ・ 経験{d.experience}年</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-amber-600">{d.matchScore}</div>
-                    <div className="text-[9px] text-gray-400">総合スコア</div>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  {d.breakdown.map((item, bi) => (
-                    <div key={item.label} className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-400 w-16 flex-shrink-0">{item.label}</span>
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full bg-amber-500 rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${item.score}%` }}
-                          transition={{ duration: 0.7, ease: "easeOut", delay: idx * 0.08 + bi * 0.06 + 0.15 }}
-                        />
-                      </div>
-                      <span className="text-[10px] font-semibold text-gray-600 w-7 text-right">{item.score}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-2.5 flex justify-end">
-                  <span className="text-[10px] text-amber-600 font-medium">
-                    {isExpanded ? "閉じる" : "アクションを見る"}
-                  </span>
-                </div>
-              </button>
+              <div className="flex items-start">
+                {/* Checkbox in compare mode */}
+                {compareMode && (
+                  <button
+                    onClick={() => toggleCompareSelect(d.id)}
+                    className="pl-3 pt-4 flex-shrink-0"
+                  >
+                    <span className={isChecked ? "text-amber-500" : "text-gray-300"}>
+                      {isChecked
+                        ? <CheckCircle2 className="w-5 h-5" />
+                        : <Circle className="w-5 h-5" />}
+                    </span>
+                  </button>
+                )}
 
-              {/* Expandable action section */}
+                {/* Clickable card body */}
+                <button
+                  onClick={() => !compareMode && toggleExpand(d.id)}
+                  className="flex-1 text-left p-3.5 min-w-0"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="relative">
+                      <Avatar initials={d.initials} size="sm" variant="amber" />
+                      {isPriority && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center">
+                          <Star className="w-2.5 h-2.5 text-white fill-white" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm text-gray-800">{d.name}</div>
+                      <div className="text-[11px] text-gray-400">{d.specialty} ・ 経験{d.experience}年</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-amber-600">{d.matchScore}</div>
+                      <div className="text-[9px] text-gray-400">総合スコア</div>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {d.breakdown.map((item, bi) => (
+                      <div key={item.label} className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 w-16 flex-shrink-0">{item.label}</span>
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full bg-amber-500 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${item.score}%` }}
+                            transition={{ duration: 0.7, ease: "easeOut", delay: idx * 0.08 + bi * 0.06 + 0.15 }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-semibold text-gray-600 w-7 text-right">{item.score}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {!compareMode && (
+                    <div className="mt-2.5 flex justify-end">
+                      <span className="text-[10px] text-amber-600 font-medium">
+                        {isExpanded ? "閉じる" : "アクションを見る"}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              </div>
+
+              {/* Expandable action section (non-compare mode only) */}
               <AnimatePresence initial={false}>
-                {isExpanded && (
+                {!compareMode && isExpanded && (
                   <motion.div
                     key="actions"
                     initial={{ height: 0, opacity: 0 }}
@@ -610,21 +822,71 @@ function HospitalCandidateScore() {
           );
         })}
       </div>
+
+      {/* Sticky bottom bar in compare mode */}
+      <AnimatePresence>
+        {compareMode && (
+          <motion.div
+            className="absolute bottom-14 left-0 right-0 px-4 py-2 bg-white border-t border-amber-200 shadow-md"
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="text-[11px] text-gray-400 text-center mb-1.5">
+              {compareSelected.length}名選択中（最大3名）
+            </div>
+            <button
+              disabled={compareSelected.length < 2}
+              onClick={() => setShowCompareModal(true)}
+              className="w-full py-2.5 bg-amber-600 text-white rounded-xl font-semibold text-sm disabled:opacity-40 transition-opacity"
+            >
+              {compareSelected.length}名を比較する
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Compare modal */}
+      <AnimatePresence>
+        {showCompareModal && (
+          <DoctorCompareModal
+            doctors={selectedDoctors}
+            priorityIds={priorityIds}
+            onTogglePriority={togglePriority}
+            onClose={() => setShowCompareModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
+const WEIGHT_PRESETS = [
+  { name: "スキル重視", weights: [60, 15, 10, 10, 5] },
+  { name: "経験重視", weights: [30, 45, 10, 10, 5] },
+  { name: "論文重視", weights: [25, 20, 35, 15, 5] },
+  { name: "バランス",  weights: [40, 25, 15, 12, 8] },
+] as const;
+
 function HospitalCriteriaWeights() {
   const [weights, setWeights] = useState(CRITERIA.map((c) => c.weight));
+  const [activePreset, setActivePreset] = useState<string | null>(null);
 
   const total = weights.reduce((s, w) => s + w, 0);
 
   const adjust = (i: number, delta: number) => {
+    setActivePreset(null);
     setWeights((prev) => {
       const next = [...prev];
       next[i] = Math.max(5, Math.min(60, next[i] + delta));
       return next;
     });
+  };
+
+  const applyPreset = (preset: typeof WEIGHT_PRESETS[number]) => {
+    setActivePreset(preset.name);
+    setWeights([...preset.weights]);
   };
 
   return (
@@ -637,6 +899,29 @@ function HospitalCriteriaWeights() {
       </div>
 
       <div className="px-4 py-4 space-y-3">
+        {/* Preset template pills */}
+        <div>
+          <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">プリセット</div>
+          <div className="flex flex-wrap gap-1.5">
+            {WEIGHT_PRESETS.map((preset) => {
+              const isActive = activePreset === preset.name;
+              return (
+                <button
+                  key={preset.name}
+                  onClick={() => applyPreset(preset)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
+                    isActive
+                      ? "bg-amber-500 text-white border-amber-500"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:text-amber-700"
+                  }`}
+                >
+                  {preset.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {CRITERIA.map((c, i) => (
           <div key={c.label} className="bg-white rounded-xl p-3.5 border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-2">

@@ -324,6 +324,32 @@ function DoctorCaseGrid() {
             <Grid2x2 className="w-5 h-5" /> MedPortfolio
           </h1>
           <p className="text-xs text-rose-200 mt-0.5">田中 太郎 先生の症例ポートフォリオ</p>
+
+          {/* Achievement row */}
+          <div className="mt-3 flex items-center gap-3">
+            {/* Instructor certification progress */}
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] text-rose-200 mb-1 leading-tight">指導医認定取得まで</div>
+              <div className="h-1.5 bg-rose-900/50 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-rose-200 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: "60%" }}
+                  transition={{ duration: 1.0, ease: "easeOut", delay: 0.2 }}
+                />
+              </div>
+              <div className="text-[9px] text-rose-300 mt-0.5">60%</div>
+            </div>
+
+            {/* Monthly surgery counter */}
+            <div className="flex-shrink-0 flex items-center gap-1.5 bg-teal-500/20 border border-teal-400/40 rounded-lg px-2.5 py-1.5">
+              <Scissors className="w-3 h-3 text-teal-300 flex-shrink-0" />
+              <div>
+                <div className="text-[9px] text-teal-300 leading-tight">今月の手術件数</div>
+                <div className="text-xs font-bold text-white leading-tight">12件</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Animated stats row */}
@@ -703,6 +729,141 @@ function HospitalShowcase() {
   );
 }
 
+type ApplyStep = "idle" | "form" | "success";
+
+const JOIN_OPTIONS = ["3ヶ月以内", "半年以内", "1年以内", "要相談"] as const;
+
+function ApplicationFormOverlay({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [motivation, setMotivation] = useState("");
+  const [joinTime, setJoinTime] = useState<string>("");
+  const [hasReferral, setHasReferral] = useState<boolean | null>(null);
+  const [pr, setPr] = useState("");
+
+  const canSubmit = motivation.trim().length > 0 && joinTime !== "" && hasReferral !== null;
+
+  return (
+    <motion.div
+      key="app-form"
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={{ duration: 0.32, ease: "easeOut" }}
+      className="absolute inset-0 z-30 bg-white flex flex-col"
+    >
+      {/* Handle + header */}
+      <div className="flex-shrink-0 px-4 pt-3 pb-3 border-b border-gray-100">
+        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-3" />
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-gray-800">応募フォーム</h2>
+          <button
+            onClick={onCancel}
+            className="text-xs text-gray-400 font-medium hover:text-gray-600"
+          >
+            キャンセル
+          </button>
+        </div>
+      </div>
+
+      {/* Scrollable fields */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+        {/* 志望動機 */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-bold text-gray-600">志望動機 <span className="text-rose-500">*</span></label>
+            <span className="text-[10px] text-gray-400">{motivation.length}/300</span>
+          </div>
+          <textarea
+            value={motivation}
+            onChange={(e) => setMotivation(e.target.value.slice(0, 300))}
+            placeholder="この求人に応募する理由をお書きください..."
+            rows={4}
+            className="w-full text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-purple-400 focus:bg-white transition-colors placeholder-gray-300"
+          />
+        </div>
+
+        {/* 希望入職時期 */}
+        <div>
+          <label className="text-xs font-bold text-gray-600 block mb-1.5">希望入職時期 <span className="text-rose-500">*</span></label>
+          <div className="flex flex-wrap gap-1.5">
+            {JOIN_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => setJoinTime(opt)}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
+                  joinTime === opt
+                    ? "bg-purple-700 text-white border-purple-700"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-purple-300"
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 紹介状 */}
+        <div>
+          <label className="text-xs font-bold text-gray-600 block mb-1.5">紹介状 <span className="text-rose-500">*</span></label>
+          <div className="flex gap-2">
+            {(["あり", "なし"] as const).map((val) => {
+              const isSelected = val === "あり" ? hasReferral === true : hasReferral === false;
+              return (
+                <button
+                  key={val}
+                  onClick={() => setHasReferral(val === "あり")}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                    isSelected
+                      ? "bg-purple-700 text-white border-purple-700"
+                      : "bg-white text-gray-500 border-gray-200 hover:border-purple-300"
+                  }`}
+                >
+                  {val}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* PR */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-bold text-gray-600">自己PR</label>
+            <span className="text-[10px] text-gray-400">{pr.length}/200</span>
+          </div>
+          <textarea
+            value={pr}
+            onChange={(e) => setPr(e.target.value.slice(0, 200))}
+            placeholder="あなたの強みや実績を自由にお書きください..."
+            rows={3}
+            className="w-full text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-purple-400 focus:bg-white transition-colors placeholder-gray-300"
+          />
+        </div>
+      </div>
+
+      {/* Confirm button */}
+      <div className="flex-shrink-0 px-4 pb-5 pt-3 border-t border-gray-100">
+        <button
+          onClick={onConfirm}
+          disabled={!canSubmit}
+          className={`w-full py-3 rounded-xl text-sm font-bold transition-opacity ${
+            canSubmit
+              ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white opacity-100"
+              : "bg-gradient-to-r from-rose-500 to-pink-500 text-white opacity-40 cursor-not-allowed"
+          }`}
+        >
+          応募を確定する
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 function RoleDetailView({
   role,
   onBack,
@@ -710,7 +871,7 @@ function RoleDetailView({
   role: Role;
   onBack: () => void;
 }) {
-  const [applied, setApplied] = useState(false);
+  const [applyStep, setApplyStep] = useState<ApplyStep>("idle");
 
   return (
     <motion.div
@@ -821,7 +982,7 @@ function RoleDetailView({
       {/* Apply button — fixed at bottom */}
       <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 pt-3 bg-gray-50 border-t border-gray-200">
         <AnimatePresence mode="wait">
-          {applied ? (
+          {applyStep === "success" ? (
             <motion.div
               key="success"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -840,7 +1001,7 @@ function RoleDetailView({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.25 }}
-              onClick={() => setApplied(true)}
+              onClick={() => setApplyStep("form")}
               className="w-full py-3 rounded-xl bg-purple-700 text-white text-sm font-bold"
             >
               応募する
@@ -848,6 +1009,16 @@ function RoleDetailView({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Application form overlay */}
+      <AnimatePresence>
+        {applyStep === "form" && (
+          <ApplicationFormOverlay
+            onConfirm={() => setApplyStep("success")}
+            onCancel={() => setApplyStep("idle")}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
